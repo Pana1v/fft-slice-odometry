@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+data*/
+results*/
+plots/
+media_race.*
+published.json
+*.npz
+*.bag
+*.zip
