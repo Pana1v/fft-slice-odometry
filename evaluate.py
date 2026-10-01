@@ -20,7 +20,7 @@ ASSOC_TOL = 0.03       # s; GT is 20 Hz, scans 10 Hz
 RPE_DIST = 10.0        # m of travelled path per RPE segment
 REALTIME_MS = 100.0    # 10 Hz sensor
 MODES = ["fft", "fft_icp", "icp", "icp3"]
-LABEL = {"fft": "FFT only (A)", "fft_icp": "FFT + 3 ICP (B)", "icp": "Vanilla ICP (15 it)",
+LABEL = {"fft": "Freq Domain Only", "fft_icp": "FSICP (FFT seed + 3 ICP it)", "icp": "Vanilla ICP (15 it)",
          "icp3": "Vanilla ICP (3 it)"}
 COLOR = {"fft": "#e8a33d", "fft_icp": "#2f7fc1", "icp": "#8a8a8a", "icp3": "#b05fc4", "gt": "#222222"}
 

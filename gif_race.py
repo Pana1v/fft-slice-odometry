@@ -1,4 +1,4 @@
-"""Split-screen GIF: vanilla ICP (3 it) vs FFT seed + the same 3 ICP iterations.
+"""Split-screen GIF: vanilla ICP (3 it) vs FSICP (FFT seed + the same 3 ICP iterations).
 
 Each side builds its own map from its own poses, so pose error shows up as
 ghost walls. Both runs start from the same pose, so one transform (fitted on
@@ -22,8 +22,8 @@ from evaluate import T_B_PRISM, associate, umeyama
 
 BG, FG, DIM = "#0d1117", "#e8e8e8", "#6b7380"
 GOOD, WARN, BAD = "#3ddc84", "#f5b942", "#ff5a5a"
-SIDES = [("icp3", "Vanilla ICP", "3 iterations, constant-velocity start", "#c77ddb"),
-         ("fft_icp", "FFT seed + ICP", "same 3 iterations, started from FFT", "#39a0ff")]
+SIDES = [("icp3", "Vanilla ICP", "#c77ddb"),
+         ("fft_icp", "FSICP", "#39a0ff")]
 RES = 0.08            # m per map pixel
 WALL_MIN, WALL_MAX = 0.6, 9.0   # m above the ground, keeps walls, drops the floor
 FPS = 8
@@ -54,7 +54,7 @@ def main():
     poses = {m: load_poses(f"{res}/traj_{m}.tum")[1] for m, *_ in SIDES}
     prism = {m: poses[m][:, :3, 3] + poses[m][:, :3, :3] @ T_B_PRISM for m in poses}
 
-    # One shared odometry -> Leica transform, fitted on the accurate run
+    # One shared odometry -> Leica transform, fitted on the FSICP run
     ie, ig = associate(stamps, t_gt)
     R, t = umeyama(prism["fft_icp"][ie], p_gt[ig])
     to_w = lambda P: P @ R.T + t
@@ -87,16 +87,13 @@ def main():
 
     plt.rcParams.update({"text.color": FG, "font.size": 12, "axes.edgecolor": "#2a313b"})
     fig = plt.figure(figsize=(12.8, 7.6), dpi=100, facecolor=BG)
-    fig.text(0.03, 0.955, "Same ICP budget, with and without the FFT seed", fontsize=21, weight="bold")
-    fig.text(0.03, 0.918, "Drone, NTU VIRAL eee_03  |  2x Ouster OS1-16, LiDAR only  |  every 4th scan (2.5 Hz), "
-             "so the drone moves ~0.5 m between scans", fontsize=11, color=DIM)
-    fig.text(0.03, 0.888, "Each side builds its own map from its own poses:  sharp walls = correct poses,  "
-             "smeared ghost walls = drift", fontsize=11, color=FG)
+    fig.text(0.03, 0.945, "Vanilla ICP vs FSICP", fontsize=22, weight="bold")
+    fig.text(0.97, 0.945, "NTU VIRAL eee_03", fontsize=12, color=DIM, ha="right")
 
     ext = [c0[0] - half, c0[0] + half, c0[1] - half, c0[1] + half]
     art = {}
-    for k, (m, name, sub, col) in enumerate(SIDES):
-        ax = fig.add_axes([0.03 + k * 0.485, 0.24, 0.455, 0.62])
+    for k, (m, name, col) in enumerate(SIDES):
+        ax = fig.add_axes([0.03 + k * 0.485, 0.24, 0.455, 0.66])
         ax.set_facecolor(BG)
         ax.set_xticks([]); ax.set_yticks([])
         im = ax.imshow(np.zeros((n, n)), extent=ext, origin="lower", cmap="bone", vmin=0, vmax=1)
@@ -107,11 +104,8 @@ def main():
         head, = ax.plot([], [], color="white", lw=2)
         ax.set_xlim(ext[:2]); ax.set_ylim(ext[2:])
         ax.text(0.02, 0.97, name, transform=ax.transAxes, fontsize=18, weight="bold", color=col, va="top")
-        ax.text(0.02, 0.905, sub, transform=ax.transAxes, fontsize=11, color=DIM, va="top")
         e_txt = ax.text(0.98, 0.03, "", transform=ax.transAxes, fontsize=26, weight="bold", ha="right",
                         va="bottom")
-        ax.text(0.98, 0.135, "position error now", transform=ax.transAxes, fontsize=10, color=DIM, ha="right",
-                va="bottom")
         ax.plot([ext[0] + 1, ext[0] + 6], [ext[2] + 1.2] * 2, color=FG, lw=3)
         ax.text(ext[0] + 3.5, ext[2] + 1.6, "5 m", ha="center", fontsize=10)
         art[m] = (im, gt_l, est_l, scan, dot, head, e_txt)
@@ -120,22 +114,22 @@ def main():
     ax_e = fig.add_axes([0.06, 0.06, 0.56, 0.13])
     ax_e.set_facecolor(BG)
     t_rel = stamps - t_gt[0]
-    e_lines = {m: ax_e.plot([], [], color=col, lw=2.2)[0] for m, _, _, col in SIDES}
+    e_lines = {m: ax_e.plot([], [], color=col, lw=2.2)[0] for m, _, col in SIDES}
     ax_e.set_xlim(t_rel[start], t_rel[-1])
     ax_e.set_ylim(0, np.nanmax([np.nanmax(err[m]) for m in poses]) * 1.1)
     ax_e.set_ylabel("error [m]", color=DIM, fontsize=10)
-    ax_e.set_xlabel("flight time [s]", color=DIM, fontsize=10)
+    ax_e.set_xlabel("time [s]", color=DIM, fontsize=10)
     ax_e.tick_params(colors=DIM, labelsize=9)
     ax_e.grid(alpha=0.15)
 
     ax_c = fig.add_axes([0.70, 0.06, 0.27, 0.13])
     ax_c.set_facecolor(BG)
-    bars = ax_c.barh([0, 1], [0, 0], color=[s[3] for s in SIDES], height=0.55)
+    bars = ax_c.barh([0, 1], [0, 0], color=[s[2] for s in SIDES], height=0.55)
     ax_c.set_yticks([0, 1], [s[1] for s in SIDES], color=FG, fontsize=10)
     ax_c.set_xlim(0, 60)
     ax_c.invert_yaxis()
     ax_c.tick_params(colors=DIM, labelsize=9)
-    ax_c.set_title("compute per scan (running avg, ms)", color=DIM, fontsize=10, loc="left")
+    ax_c.set_title("ms per scan", color=DIM, fontsize=10, loc="left")
     c_txt = [ax_c.text(0, y, "", va="center", fontsize=10, color=FG) for y in (0, 1)]
 
     with tempfile.TemporaryDirectory() as tmp:
